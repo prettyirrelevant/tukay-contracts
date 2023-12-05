@@ -47,18 +47,18 @@ describe('Airdrop', function (){
 
     describe('Creations', function () {
         it('Should create an airdrop with native token', async function () {
-            const { airdrop } = await loadFixture(deployAirdropFixture)
+            const { airdrop, owner } = await loadFixture(deployAirdropFixture)
 
             const amountToShare = ethers.parseEther('0.01');
             const { merkleRoot, whitelisted } = await generateMerkleProof();
 
             // airdrop count remains unchanged before creation
             expect(await airdrop.count()).to.equal(0);
-            const airdropCreationTx = await airdrop.createAirdrop(merkleRoot, ethers.ZeroAddress, amountToShare, whitelisted.length, {value: amountToShare})
+            const airdropCreationTx = await airdrop.createAirdrop(ethers.encodeBytes32String('First of many'), merkleRoot, ethers.ZeroAddress, amountToShare, whitelisted.length, {value: amountToShare})
 
             // airdrop count incremented by one after creation
             expect(await airdrop.count()).to.equal(1);
-            expect(airdropCreationTx).to.emit(airdrop, 'NewAirdrop').withArgs(1, ethers.ZeroAddress, amountToShare, merkleRoot);
+            expect(airdropCreationTx).to.emit(airdrop, 'NewAirdrop').withArgs(1, ethers.encodeBytes32String('First of many'), ethers.ZeroAddress, amountToShare, merkleRoot, 5, owner.address);
         })
 
         it('Should create an airdrop with a valid ERC20 token', async function () {
@@ -74,11 +74,11 @@ describe('Airdrop', function (){
             await wavaxContract.approve(airdropAddress, ethers.parseEther("1"));
 
             const { merkleRoot, whitelisted } = await generateMerkleProof();
-            const airdropCreationTx = await airdrop.createAirdrop(merkleRoot, WAVAX_ADDRESS, ethers.parseEther("1"), whitelisted.length);
+            const airdropCreationTx = await airdrop.createAirdrop(ethers.encodeBytes32String('First of many'), merkleRoot, WAVAX_ADDRESS, ethers.parseEther("1"), whitelisted.length);
 
             // airdrop count incremented by one after creation
             expect(await airdrop.count()).to.equal(1);
-            expect(airdropCreationTx).to.emit(airdrop, 'NewAirdrop').withArgs(1, WAVAX_ADDRESS, ethers.parseEther("1"), merkleRoot);
+            expect(airdropCreationTx).to.emit(airdrop, 'NewAirdrop').withArgs(1, ethers.encodeBytes32String('First of many'), WAVAX_ADDRESS, ethers.parseEther("1"), merkleRoot,  5, owner.address);
         })
 
         it('Should fail if amount sent mismatch', async function () {
@@ -90,7 +90,7 @@ describe('Airdrop', function (){
             // airdrop count remains unchanged before creation
             expect(await airdrop.count()).to.equal(0);
 
-            await expect(airdrop.createAirdrop(merkleRoot, ethers.ZeroAddress, amountToShare, whitelisted.length, {value: ethers.parseEther('0.001')})).to.revertedWith('Ether sent must be equal to the amount specified');
+            await expect(airdrop.createAirdrop(ethers.encodeBytes32String('First of many'), merkleRoot, ethers.ZeroAddress, amountToShare, whitelisted.length, {value: ethers.parseEther('0.001')})).to.revertedWith('Ether sent must be equal to the amount specified');
 
             // airdrop count remains unchanged after attempting creation
             expect(await airdrop.count()).to.equal(0);
@@ -111,7 +111,7 @@ describe('Airdrop', function (){
 
             // airdrop count remains unchanged after attempting creation
             expect(await airdrop.count()).to.equal(0);
-            await expect(airdrop.createAirdrop(merkleRoot, WAVAX_ADDRESS, ethers.parseEther("1"), whitelisted.length)).to.revertedWithCustomError(airdrop, 'FailedInnerCall');
+            await expect(airdrop.createAirdrop(ethers.encodeBytes32String('First of many'), merkleRoot, WAVAX_ADDRESS, ethers.parseEther("1"), whitelisted.length)).to.revertedWithCustomError(airdrop, 'FailedInnerCall');
         })
 
         it('Should fail is amount is zero', async function () {
@@ -122,7 +122,7 @@ describe('Airdrop', function (){
 
             // airdrop count remains unchanged before creation
             expect(await airdrop.count()).to.equal(0);
-            await expect(airdrop.createAirdrop(merkleRoot, ethers.ZeroAddress, amountToShare, whitelisted.length, {value: amountToShare})).to.revertedWith('Airdrop must have an amount to be distributed');
+            await expect(airdrop.createAirdrop(ethers.encodeBytes32String('First of many'), merkleRoot, ethers.ZeroAddress, amountToShare, whitelisted.length, {value: amountToShare})).to.revertedWith('Airdrop must have an amount to be distributed');
         })
     })
 
@@ -133,7 +133,7 @@ describe('Airdrop', function (){
             const amountToShare = ethers.parseEther('0.1');
             const { tree, merkleRoot, whitelisted, notWhitelisted } = await generateMerkleProof();
 
-            expect(await airdrop.createAirdrop(merkleRoot, ethers.ZeroAddress, amountToShare, whitelisted.length, {value: amountToShare}));
+            expect(await airdrop.createAirdrop(ethers.encodeBytes32String('First of many'), merkleRoot, ethers.ZeroAddress, amountToShare, whitelisted.length, {value: amountToShare}));
             await expect(airdrop.withdrawAirdropShare(10, tree.getHexProof(padBuffer(notWhitelisted[0].address)))).to.revertedWith('Airdrop does not exist');
         })
         it('Should fail if address is invalid for the merkle tree', async function () {
@@ -142,7 +142,7 @@ describe('Airdrop', function (){
             const amountToShare = ethers.parseEther('0.1');
             const { tree, merkleRoot, whitelisted, notWhitelisted } = await generateMerkleProof();
 
-            expect(await airdrop.createAirdrop(merkleRoot, ethers.ZeroAddress, amountToShare, whitelisted.length, {value: amountToShare}));
+            expect(await airdrop.createAirdrop(ethers.encodeBytes32String('First of many'), merkleRoot, ethers.ZeroAddress, amountToShare, whitelisted.length, {value: amountToShare}));
             await expect(airdrop.withdrawAirdropShare(1, tree.getHexProof(padBuffer(notWhitelisted[0].address)))).to.revertedWith('You are not a valid recipient of this airdrop');
         });
         it('Should be successful if address is valid for the merkle tree (Native Token)', async function () {
@@ -155,7 +155,7 @@ describe('Airdrop', function (){
             await wavaxContract.approve(airdropAddress, ethers.parseEther("1"));
 
             const { tree, merkleRoot, whitelisted } = await generateMerkleProof();
-            await airdrop.createAirdrop(merkleRoot, WAVAX_ADDRESS, ethers.parseEther("1"), whitelisted.length);
+            await airdrop.createAirdrop(ethers.encodeBytes32String('First of many'), merkleRoot, WAVAX_ADDRESS, ethers.parseEther("1"), whitelisted.length);
 
             const airdropParticipationTx = await airdrop.connect(whitelisted[2]).withdrawAirdropShare(1, tree.getHexProof(padBuffer(whitelisted[2].address)));
             expect(airdropParticipationTx).to.emit(airdrop, 'AirdropDistributed').withArgs(1, whitelisted[2].address, ethers.parseEther("1") / BigInt(whitelisted.length));
@@ -166,7 +166,7 @@ describe('Airdrop', function (){
             const amountToShare = ethers.parseEther('0.1');
             const { tree, merkleRoot, whitelisted } = await generateMerkleProof();
 
-            expect(await airdrop.createAirdrop(merkleRoot, ethers.ZeroAddress, amountToShare, whitelisted.length, {value: amountToShare}));
+            expect(await airdrop.createAirdrop(ethers.encodeBytes32String('First of many'), merkleRoot, ethers.ZeroAddress, amountToShare, whitelisted.length, {value: amountToShare}));
 
             const airdropParticipationTx = await airdrop.connect(whitelisted[2]).withdrawAirdropShare(1, tree.getHexProof(padBuffer(whitelisted[2].address)));
             expect(airdropParticipationTx).to.emit(airdrop, 'AirdropDistributed').withArgs(1, whitelisted[2].address, ethers.parseEther("0.1") / BigInt(whitelisted.length));
@@ -177,7 +177,7 @@ describe('Airdrop', function (){
             const amountToShare = ethers.parseEther('0.1');
             const { tree, merkleRoot, whitelisted } = await generateMerkleProof();
 
-            expect(await airdrop.createAirdrop(merkleRoot, ethers.ZeroAddress, amountToShare, whitelisted.length, {value: amountToShare}));
+            expect(await airdrop.createAirdrop(ethers.encodeBytes32String('First of many'), merkleRoot, ethers.ZeroAddress, amountToShare, whitelisted.length, {value: amountToShare}));
 
             const airdropParticipationTx = await airdrop.connect(whitelisted[2]).withdrawAirdropShare(1, tree.getHexProof(padBuffer(whitelisted[2].address)));
 

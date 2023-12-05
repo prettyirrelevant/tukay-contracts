@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 contract Airdrop {
     struct AirdropInfo {
+        bytes32 name;
         address token;
         uint256 amount;
         address creator;
@@ -23,9 +24,12 @@ contract Airdrop {
 
     event NewAirdrop(
         uint256 indexed identifier,
+        bytes32 name,
         address token,
+        bytes32 proof,
+        address owner,
         uint256 amount,
-        bytes32 proof
+        uint256 claims
     );
 
     event AirdropDistributed(
@@ -39,6 +43,7 @@ contract Airdrop {
     }
 
     function createAirdrop(
+        bytes32 name,
         bytes32 root,
         address token,
         uint256 amount,
@@ -68,6 +73,7 @@ contract Airdrop {
 
         count += 1;
         airdrops[count] = AirdropInfo({
+            name: name,
             token: token,
             amount: amount,
             merkleRoot: root,
@@ -75,7 +81,7 @@ contract Airdrop {
             recipientsCount: recipientsCount
         });
 
-        emit NewAirdrop(count, token, amount, root);
+        emit NewAirdrop(count, name, token, root,msg.sender, amount, recipientsCount);
         return count;
     }
 
