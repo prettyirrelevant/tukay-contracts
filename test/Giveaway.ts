@@ -367,7 +367,7 @@ describe('Giveaway', function () {
     });
 
     describe('Withdrawal (Regular Giveaway)', function () {
-        it('Should pick winners once giveaway has ended', async function () {
+        it('Should pick winners once giveaway has ended & withdrawal succeeds', async function () {
             const { VRFCoordinatorV2Mock, giveawayAddress, otherAccount, giveaway } =
                 await loadFixture(deployGiveawayFixture);
 

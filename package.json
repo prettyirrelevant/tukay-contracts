@@ -19,11 +19,15 @@
     "solidity-coverage": "^0.8.5"
   },
   "scripts": {
+    "test": "hardhat test",
     "compile": "hardhat compile",
-    "lint": "solhint 'contracts/*.sol'",
+    "lint": "npm run lint:sol && npm run lint:ts",
+    "lint:sol": "solhint --max-warnings 0 \"contracts/**/*.sol\"",
+    "lint:ts": "eslint --ignore-path ./.eslintignore --ext .js,.ts .",
     "lint:fix": "solhint 'contracts/**/*.sol' --fix",
     "coverage": "hardhat coverage --solcoverjs ./.solcover.js",
-    "format": "eslint --fix . --ext 'ts,js' && prettier --write ."
+    "format": "eslint --fix . --ext 'ts,js' && prettier --write .",
+    "typechain": "hardhat typechain"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.0.0"
