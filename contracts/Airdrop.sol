@@ -16,11 +16,11 @@ contract Airdrop {
     }
 
     uint256 public count = 0;
-    address constant ZERO_ADDRESS = address(0);
+    address internal constant ZERO_ADDRESS = address(0);
 
-    address public immutable admin;
-    mapping(uint256 => AirdropInfo) airdrops;
-    mapping(uint256 => mapping(address => bool)) claimedAirdrops;
+    address public admin;
+    mapping(uint256 => AirdropInfo) public airdrops;
+    mapping(uint256 => mapping(address => bool)) public claimedAirdrops;
 
     event NewAirdrop(
         uint256 indexed identifier,
@@ -72,16 +72,25 @@ contract Airdrop {
         }
 
         count += 1;
+        uint256 amountAfterFivePercentCut = calculate95Percent(amount);
         airdrops[count] = AirdropInfo({
             name: name,
             token: token,
-            amount: amount,
             merkleRoot: root,
             creator: msg.sender,
-            recipientsCount: recipientsCount
+            recipientsCount: recipientsCount,
+            amount: amountAfterFivePercentCut
         });
 
-        emit NewAirdrop(count, name, token, root,msg.sender, amount, recipientsCount);
+        emit NewAirdrop(
+            count,
+            name,
+            token,
+            root,
+            msg.sender,
+            amountAfterFivePercentCut,
+            recipientsCount
+        );
         return count;
     }
 
@@ -125,5 +134,15 @@ contract Airdrop {
 
         claimedAirdrops[airdropId][msg.sender] = true;
         emit AirdropDistributed(airdropId, msg.sender, amountPerRecipient);
+    }
+
+    function calculate95Percent(uint256 value) public pure returns (uint256) {
+        (bool success, uint256 result) = Math.tryDiv(value, 100);
+        require(success, "Division overflowed");
+
+        (success, result) = Math.tryMul(result, 95);
+        require(success, "Multiplication underflowed");
+
+        return result;
     }
 }
