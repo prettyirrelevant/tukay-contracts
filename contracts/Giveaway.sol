@@ -31,8 +31,8 @@ contract Giveaway is VRFConsumerBaseV2 {
         uint256 startAt;
         address creator;
         bool hasWinners;
-        uint32 maxWinners;
-        uint32 maxParticipants;
+        uint256 maxWinners;
+        uint256 maxParticipants;
     }
     struct RegularGiveawayWinner {
         bool hasWithdrawnFunds;
@@ -50,8 +50,8 @@ contract Giveaway is VRFConsumerBaseV2 {
         uint256 amount,
         address creator,
         uint256 startAt,
-        uint32 maxWinners,
-        uint32 maxParticipants
+        uint256 maxWinners,
+        uint256 maxParticipants
     );
 
     event NewRegularGiveawayParticipant(
@@ -63,6 +63,7 @@ contract Giveaway is VRFConsumerBaseV2 {
         uint256 indexed identifier,
         address participant
     );
+
     event RegularGiveawayWinnerPaid(uint256 indexed identifier, address winner, uint256 amount);
 
     constructor(
@@ -94,8 +95,8 @@ contract Giveaway is VRFConsumerBaseV2 {
         address _token,
         uint256 _amount,
         uint256 _startAt,
-        uint32 _maxWinners,
-        uint32 _maxParticipants
+        uint256 _maxWinners,
+        uint256 _maxParticipants
     ) public payable returns (uint256) {
         require(
             _maxWinners > 0 && _maxParticipants > 0,
@@ -206,19 +207,18 @@ contract Giveaway is VRFConsumerBaseV2 {
         );
 
         // request random indexes from VRF
-        uint32 randomWordsToGenerate = SafeCast.toUint32(
+        uint256 randomWordsToGenerate =
             EnumerableMap.length(regularGiveawaysParticipants[giveawayId]) <
                 giveaway.maxWinners
                 ? EnumerableMap.length(regularGiveawaysParticipants[giveawayId])
-                : giveaway.maxWinners
-        );
+                : giveaway.maxWinners;
 
         uint256 requestId = coordinator.requestRandomWords(
             keyHash,
             subscriptionId,
             3,
             250000,
-            randomWordsToGenerate
+            SafeCast.toUint32(randomWordsToGenerate)
         );
 
         requestIdsToRegularGiveaways[requestId] = giveawayId;
@@ -277,6 +277,9 @@ contract Giveaway is VRFConsumerBaseV2 {
         emit RegularGiveawayWinnerPaid(giveawayId, msg.sender, prizeMoney);
     }
 
+    function createTriviaGiveaway() {}
+    function createActivityGiveaway() {}
+
     function fulfillRandomWords(
         uint256 requestId,
         uint256[] memory randomWords
@@ -293,7 +296,7 @@ contract Giveaway is VRFConsumerBaseV2 {
             ? EnumerableMap.length(regularGiveawaysParticipants[giveawayId])
             : giveaway.maxWinners;
 
-        for (uint32 i = 0; i < randomWords.length; i++) {
+        for (uint256 i = 0; i < randomWords.length; i++) {
             (bool success, uint256 index) = Math.tryMod(
                 randomWords[i],
                 maxNumber

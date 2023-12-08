@@ -16,6 +16,7 @@ contract Airdrop {
     }
 
     uint256 public count = 0;
+    uint256 public percentageCut;
     address internal constant ZERO_ADDRESS = address(0);
 
     address public admin;
@@ -38,8 +39,9 @@ contract Airdrop {
         uint256 amount
     );
 
-    constructor() {
+    constructor(uint256 _percentageCut) {
         admin = msg.sender;
+        percentageCut = _percentageCut;
     }
 
     function createAirdrop(
@@ -72,7 +74,7 @@ contract Airdrop {
         }
 
         count += 1;
-        uint256 amountAfterFivePercentCut = calculate95Percent(amount);
+        uint256 amountAfterFivePercentCut = calculatePercentageCut(amount);
         airdrops[count] = AirdropInfo({
             name: name,
             token: token,
@@ -136,13 +138,18 @@ contract Airdrop {
         emit AirdropDistributed(airdropId, msg.sender, amountPerRecipient);
     }
 
-    function calculate95Percent(uint256 value) public pure returns (uint256) {
+    function calculatePercentageCut(uint256 value) public view returns (uint256) {
         (bool success, uint256 result) = Math.tryDiv(value, 100);
         require(success, "Division overflowed");
 
-        (success, result) = Math.tryMul(result, 95);
+        (success, result) = Math.tryMul(result, percentageCut);
         require(success, "Multiplication underflowed");
 
         return result;
+    }
+
+    function updatePercentageCut(uint256 value) public returns (uint256) {
+        percentageCut = value;
+        return value;
     }
 }

@@ -11,7 +11,7 @@ describe('Airdrop', function () {
     async function deployAirdropFixture() {
         const [owner, otherAccount] = await ethers.getSigners();
         const Airdrop = await ethers.getContractFactory('Airdrop');
-        const airdrop = await Airdrop.deploy();
+        const airdrop = await Airdrop.deploy(95);
         const airdropAddress = await airdrop.getAddress();
         return { airdropAddress, otherAccount, airdrop, owner };
     }
@@ -42,6 +42,7 @@ describe('Airdrop', function () {
             const { airdrop } = await loadFixture(deployAirdropFixture);
 
             expect(await airdrop.count()).to.equal(0);
+            expect(await airdrop.percentageCut()).to.equal(95);
         });
     });
 
