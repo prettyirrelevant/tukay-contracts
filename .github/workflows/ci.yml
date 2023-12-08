@@ -8,28 +8,24 @@ on:
       - main
 
 jobs:
-  ci:
+  test-contracts:
+    name: Smart Contract Tests
     runs-on: "ubuntu-latest"
     steps:
-      - name: "Check out the repo"
-        uses: "actions/checkout@v3"
+    - name: Checkout
+      uses: actions/checkout@v3
 
-      - name: "Install Node.js"
-        uses: "actions/setup-node@v3"
-        with:
-          cache: "npm"
-          node-version: "lts/*"
+    - name: Setup Nodejs
+      uses: actions/setup-node@v3
+      with:
+        cache: "npm"
+        node-version: "lts/*"
 
-      - name: "Install the dependencies"
-        run: "npm install"
+    - name: Install dependencies
+      run: npm install
 
-      - name: "Compile the contracts and generate the TypeChain bindings"
-        run: "npm run typechain"
+    - name: Compile the contracts and generate the TypeChain bindings
+      run: npm run typechain
 
-      - name: "Test the contracts and generate the coverage report"
-        run: "npm run coverage"
-
-      - name: "Add test summary"
-        run: |
-          echo "## Test results" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
+    - name: Test the contracts and generate the coverage report
+      run: npm run coverage
