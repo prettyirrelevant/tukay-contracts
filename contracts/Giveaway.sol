@@ -63,7 +63,7 @@ contract Giveaway is VRFConsumerBaseV2 {
         uint256 indexed identifier,
         address participant
     );
-    event RegularGiveawayWinnerPaid(uint256 indexed identifier, address winner);
+    event RegularGiveawayWinnerPaid(uint256 indexed identifier, address winner, uint256 amount);
 
     constructor(
         uint64 subId,
@@ -192,7 +192,7 @@ contract Giveaway is VRFConsumerBaseV2 {
         emit NewRegularGiveawayParticipant(giveawayId, msg.sender);
     }
 
-    function pickRegularGiveawayWinners(uint256 giveawayId) public {
+    function pickRegularGiveawayWinners(uint256 giveawayId) public returns (uint256) {
         RegularGiveaway memory giveaway = regularGiveaways[giveawayId];
         require(giveaway.amount != 0, "Giveaway does not exist");
         require(block.timestamp > giveaway.endAt, "Giveaway has not ended");
@@ -223,6 +223,8 @@ contract Giveaway is VRFConsumerBaseV2 {
 
         requestIdsToRegularGiveaways[requestId] = giveawayId;
         hasRequestedRandomWords[giveawayId] = true;
+
+        return requestId;
     }
 
     function withdrawRegularGiveawayPrize(uint256 giveawayId) external {
@@ -238,7 +240,7 @@ contract Giveaway is VRFConsumerBaseV2 {
             "Not a winner"
         );
         require(
-            regularGiveawaysWinners[giveawayId][msg.sender].hasWithdrawnFunds,
+            !regularGiveawaysWinners[giveawayId][msg.sender].hasWithdrawnFunds,
             "A withdrawal has been issued alredy"
         );
 
@@ -272,7 +274,7 @@ contract Giveaway is VRFConsumerBaseV2 {
             regularGiveawaysWinners[giveawayId][msg.sender]
                 .hasWithdrawnFunds = true;
         }
-        emit RegularGiveawayWinnerPaid(giveawayId, msg.sender);
+        emit RegularGiveawayWinnerPaid(giveawayId, msg.sender, prizeMoney);
     }
 
     function fulfillRandomWords(
@@ -282,7 +284,7 @@ contract Giveaway is VRFConsumerBaseV2 {
         uint256 giveawayId = requestIdsToRegularGiveaways[requestId];
         require(giveawayId != 0, "request not found");
 
-        RegularGiveaway memory giveaway = regularGiveaways[giveawayId];
+        RegularGiveaway storage giveaway = regularGiveaways[giveawayId];
         require(giveaway.amount != 0, "Giveaway not found");
 
         uint256 maxNumber = EnumerableMap.length(

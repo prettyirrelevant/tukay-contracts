@@ -202,10 +202,7 @@ describe('Airdrop', function () {
                 ),
             );
             await expect(
-                airdrop.withdrawAirdropShare(
-                    10,
-                    tree.getHexProof(padBuffer(notWhitelisted[0].address)),
-                ),
+                airdrop.withdrawAirdropShare(10, tree.getHexProof(padBuffer(notWhitelisted[0].address))),
             ).to.revertedWith('Airdrop does not exist');
         });
 
@@ -226,10 +223,7 @@ describe('Airdrop', function () {
                 ),
             );
             await expect(
-                airdrop.withdrawAirdropShare(
-                    1,
-                    tree.getHexProof(padBuffer(notWhitelisted[0].address)),
-                ),
+                airdrop.withdrawAirdropShare(1, tree.getHexProof(padBuffer(notWhitelisted[0].address))),
             ).to.revertedWith('You are not a valid recipient of this airdrop');
         });
 
@@ -257,11 +251,7 @@ describe('Airdrop', function () {
 
             expect(airdropParticipationTx)
                 .to.emit(airdrop, 'AirdropDistributed')
-                .withArgs(
-                    1,
-                    whitelisted[2].address,
-                    ethers.parseEther('1') / BigInt(whitelisted.length),
-                );
+                .withArgs(1, whitelisted[2].address, ethers.parseEther('1') / BigInt(whitelisted.length));
         });
 
         it('Should be successful if address is valid for the merkle tree (ERC20)', async function () {
@@ -287,11 +277,7 @@ describe('Airdrop', function () {
 
             expect(airdropParticipationTx)
                 .to.emit(airdrop, 'AirdropDistributed')
-                .withArgs(
-                    1,
-                    whitelisted[2].address,
-                    ethers.parseEther('0.1') / BigInt(whitelisted.length),
-                );
+                .withArgs(1, whitelisted[2].address, ethers.parseEther('0.1') / BigInt(whitelisted.length));
         });
 
         it('Should fail if address has already withdrawn airdrop amount', async function () {
@@ -317,11 +303,7 @@ describe('Airdrop', function () {
 
             expect(airdropParticipationTx)
                 .to.emit(airdrop, 'AirdropDistributed')
-                .withArgs(
-                    1,
-                    whitelisted[2].address,
-                    ethers.parseEther('0.1') / BigInt(whitelisted.length),
-                );
+                .withArgs(1, whitelisted[2].address, ethers.parseEther('0.1') / BigInt(whitelisted.length));
 
             await expect(
                 airdrop

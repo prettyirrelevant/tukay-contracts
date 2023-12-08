@@ -1,4 +1,4 @@
-import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
+import { loadFixture, time } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
 
@@ -10,40 +10,35 @@ describe('Giveaway', function () {
     const KEY_HASH = '0x354d2f95da55398f44b7cff77da56283d9c6c829a4bdf1bbcaf2ad6a4d081f61';
 
     async function deployVrfCoordinatorMockFixture() {
-        const BASE_FEE = '100000000000000000';
         const GAS_PRICE_LINK = '1000000000'; // 0.000000001 LINK per gas
+        const BASE_FEE = '100000000000000000';
+        const FUND_AMOUNT = '1000000000000000000';
 
         const VRFCoordinatorV2MockFactory = await ethers.getContractFactory('VRFCoordinatorV2Mock');
-        const VRFCoordinatorV2Mock = await VRFCoordinatorV2MockFactory.deploy(
-            BASE_FEE,
-            GAS_PRICE_LINK,
-        );
+        const VRFCoordinatorV2Mock = await VRFCoordinatorV2MockFactory.deploy(BASE_FEE, GAS_PRICE_LINK);
         const vrfCoordinatorAddress = await VRFCoordinatorV2Mock.getAddress();
 
-        const fundAmount = '1000000000000000000';
         const transaction = await VRFCoordinatorV2Mock.createSubscription();
         const transactionReceipt = await transaction.wait(1);
         const subscriptionId = ethers.toBigInt(transactionReceipt?.logs[0].topics[1] as string);
-        await VRFCoordinatorV2Mock.fundSubscription(subscriptionId, fundAmount);
+        await VRFCoordinatorV2Mock.fundSubscription(subscriptionId, FUND_AMOUNT);
 
         return { vrfCoordinatorAddress, VRFCoordinatorV2Mock, subscriptionId };
     }
 
     async function deployGiveawayFixture() {
         const [owner, otherAccount] = await ethers.getSigners();
-        const Giveaway = await ethers.getContractFactory('Giveaway');
-        const giveaway = await Giveaway.deploy(
-            833,
-            KEY_HASH,
-            '0x2eD832Ba664535e5886b75D64C46EB9a228C2610',
-        );
-        const giveawayAddress = await giveaway.getAddress();
-
-        const { VRFCoordinatorV2Mock, subscriptionId } = await loadFixture(
+        const { vrfCoordinatorAddress, VRFCoordinatorV2Mock, subscriptionId } = await loadFixture(
             deployVrfCoordinatorMockFixture,
         );
+
+        const Giveaway = await ethers.getContractFactory('Giveaway');
+        const giveaway = await Giveaway.deploy(subscriptionId, KEY_HASH, vrfCoordinatorAddress);
+        const giveawayAddress = await giveaway.getAddress();
+
         await VRFCoordinatorV2Mock.addConsumer(subscriptionId, giveawayAddress);
-        return { giveawayAddress, otherAccount, giveaway, owner };
+
+        return { VRFCoordinatorV2Mock, giveawayAddress, otherAccount, giveaway, owner };
     }
 
     describe('Deployment', function () {
@@ -268,9 +263,9 @@ describe('Giveaway', function () {
             expect(await giveaway.connect(otherAccount).participateInRegularGiveaway(1))
                 .to.emit(giveaway, 'NewRegularGiveawayParticipant')
                 .withArgs(1, otherAccount.address);
-            await expect(
-                giveaway.connect(otherAccount).participateInRegularGiveaway(1),
-            ).to.revertedWith('Already a participant for the giveaway');
+            await expect(giveaway.connect(otherAccount).participateInRegularGiveaway(1)).to.revertedWith(
+                'Already a participant for the giveaway',
+            );
         });
 
         it('Should fail if participant already exists', async function () {
@@ -293,9 +288,9 @@ describe('Giveaway', function () {
             expect(await giveaway.connect(otherAccount).participateInRegularGiveaway(1))
                 .to.emit(giveaway, 'NewRegularGiveawayParticipant')
                 .withArgs(1, otherAccount.address);
-            await expect(
-                giveaway.connect(otherAccount).participateInRegularGiveaway(1),
-            ).to.revertedWith('Already a participant for the giveaway');
+            await expect(giveaway.connect(otherAccount).participateInRegularGiveaway(1)).to.revertedWith(
+                'Already a participant for the giveaway',
+            );
         });
 
         it('Should fail if creator tries to participate', async function () {
@@ -335,9 +330,7 @@ describe('Giveaway', function () {
                 100,
                 { value: prize },
             );
-            await expect(giveaway.participateInRegularGiveaway(10)).to.revertedWith(
-                'Giveaway does not exist',
-            );
+            await expect(giveaway.participateInRegularGiveaway(10)).to.revertedWith('Giveaway does not exist');
         });
 
         it('Should fail if giveaway max participants reached', async function () {
@@ -362,16 +355,56 @@ describe('Giveaway', function () {
 
             // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
             const [_, __, anotherAccount, fourthAccount] = await ethers.getSigners();
+
             expect(await giveaway.connect(anotherAccount).participateInRegularGiveaway(1))
                 .to.emit(giveaway, 'NewRegularGiveawayParticipant')
                 .withArgs(1, anotherAccount.address);
-            await expect(
-                giveaway.connect(fourthAccount).participateInRegularGiveaway(1),
-            ).to.revertedWith('Max participants for giveaway reached');
+
+            await expect(giveaway.connect(fourthAccount).participateInRegularGiveaway(1)).to.revertedWith(
+                'Max participants for giveaway reached',
+            );
         });
     });
 
     describe('Withdrawal (Regular Giveaway)', function () {
-        // pickWinners & withdraw
+        it('Should pick winners once giveaway has ended', async function () {
+            const { VRFCoordinatorV2Mock, giveawayAddress, otherAccount, giveaway } =
+                await loadFixture(deployGiveawayFixture);
+
+            const prize = ethers.parseEther('0.01');
+            const startAt = Math.floor(new Date().getTime() / 1000);
+            const endAt = startAt + 86400;
+
+            await giveaway.createRegularGiveaway(
+                ethers.encodeBytes32String('First of many'),
+                endAt,
+                ethers.ZeroAddress,
+                prize,
+                startAt,
+                10,
+                100,
+                { value: prize },
+            );
+            await giveaway.connect(otherAccount).participateInRegularGiveaway(1);
+            await time.increase(86500);
+
+            const pickWinnersTxReceipt = await (await giveaway.pickRegularGiveawayWinners(1)).wait(1);
+
+            expect(
+                await VRFCoordinatorV2Mock.fulfillRandomWords(
+                    ethers.toBigInt(pickWinnersTxReceipt?.logs[0].topics[2] as string),
+                    giveawayAddress,
+                ),
+            )
+                .to.emit(giveaway, 'NewRegularGiveawayWinner')
+                .withArgs(1, otherAccount.address);
+
+            const oldBalance = await ethers.provider.getBalance(otherAccount.address);
+            expect(await giveaway.connect(otherAccount).withdrawRegularGiveawayPrize(1))
+                .to.emit(giveaway, 'RegularGiveawayWinnerPaid')
+                .withArgs(1, otherAccount.address, (prize / BigInt(100)) * BigInt(95));
+
+            expect(await ethers.provider.getBalance(otherAccount.address)).to.be.greaterThan(oldBalance);
+        });
     });
 });
