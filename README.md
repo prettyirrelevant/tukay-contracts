@@ -37,3 +37,7 @@ For the airdrop, we generate a merkle tree of the addresses that can claim the r
 
 ## Status
 Incomplete.
+
+
+## Credits
+Project name was inspired by a discussion or trend that happened on Twitter.
